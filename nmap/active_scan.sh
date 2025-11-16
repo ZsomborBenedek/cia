@@ -57,8 +57,10 @@ for (( i=1; i<=$ITERATIONS; i++ )); do
     # Run the nmap command
     # -O: Enable OS detection
     # -v: Verbose mode (optional, but good for seeing progress)
+    # -A: Enable OS detection, version detection, script scanning, and traceroute
     # >>: Append output to the specified file
-    nmap -O -v "$TARGET_IP" >> "$OUTPUT_FILE"
+    # nmap -O -v "$TARGET_IP" >> "$OUTPUT_FILE"
+    nmap -O --fuzzy "$TARGET_IP" >> "$OUTPUT_FILE"
     
     # Check if nmap command failed (e.g., target down)
     if [ $? -ne 0 ]; then

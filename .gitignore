@@ -4,3 +4,4 @@ testing
 nmap/nmap-7.98/
 nmap/*.tar.bz2
 .vscode/
+*.pcap

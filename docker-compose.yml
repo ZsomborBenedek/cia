@@ -1,14 +1,12 @@
 services:
   # =====================================================================
-  # P0F Passive OS Fingerprinting - Three targeted monitors
-  # BPF filter syntax used: host <IP> and net <subnet>
-  # Log files rotate daily using a sidecar logrotate container.
+  # P0F Windows Monitor
   # =====================================================================
 
   p0f_windows:
     image: dtagdevsec/p0f:24.04.1
     container_name: p0f_windows
-    network_mode: "host" # required for sniffing host interface
+    network_mode: "host"
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -29,6 +27,41 @@ services:
         exec /opt/p0f/p0f -i "$P0F_INTERFACE" -p -o /var/log/p0f/windows.log "${WINDOWS_FILTER}"
     restart: unless-stopped
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+  # =====================================================================
+  # TCPDUMP Capture for Windows
+  # Captures raw packets using the *same filter* as p0f_legit
+  # =====================================================================
+
+  tcpdump_windows:
+    image: nicolaka/netshoot
+    container_name: tcpdump_windows
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    read_only: true
+    volumes:
+      - ./raw_logs:/pcap:rw # Separate directory for pcap files
+    environment:
+      - P0F_INTERFACE=${P0F_INTERFACE:-eno1}
+      - WINDOWS_FILTER=${WINDOWS_FILTER} # <-- Uses the same filter
+    command:
+      - /bin/sh
+      - -c
+      - |
+        umask 022
+        mkdir -p /pcap
+        touch /pcap/windows.pcap
+        chmod 644 /pcap/windows.pcap
+        # -U = unbuffered, so the file writes in real-time
+        exec tcpdump -i "$P0F_INTERFACE" -p -U -w /pcap/windows.pcap "${WINDOWS_FILTER}"
+    restart: unless-stopped
+    # user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+  # =====================================================================
+  # P0F Linux Monitor
+  # =====================================================================
 
   p0f_linux:
     image: dtagdevsec/p0f:24.04.1
@@ -55,6 +88,41 @@ services:
     restart: unless-stopped
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
 
+  # =====================================================================
+  # TCPDUMP Capture for Linux
+  # Captures raw packets using the *same filter* as p0f_legit
+  # =====================================================================
+
+  tcpdump_linux:
+    image: nicolaka/netshoot
+    container_name: tcpdump_linux
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    read_only: true
+    volumes:
+      - ./raw_logs:/pcap:rw # Separate directory for pcap files
+    environment:
+      - P0F_INTERFACE=${P0F_INTERFACE:-eno1}
+      - LINUX_FILTER=${LINUX_FILTER} # <-- Uses the same filter
+    command:
+      - /bin/sh
+      - -c
+      - |
+        umask 022
+        mkdir -p /pcap
+        touch /pcap/linux.pcap
+        chmod 644 /pcap/linux.pcap
+        # -U = unbuffered, so the file writes in real-time
+        exec tcpdump -i "$P0F_INTERFACE" -p -U -w /pcap/linux.pcap "${LINUX_FILTER}"
+    restart: unless-stopped
+    # user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+  # =====================================================================
+  # P0F iot Monitor
+  # =====================================================================
+
   p0f_iot:
     image: dtagdevsec/p0f:24.04.1
     container_name: p0f_iot
@@ -79,7 +147,43 @@ services:
         exec /opt/p0f/p0f -i "$P0F_INTERFACE" -p -o /var/log/p0f/iot.log "${IOT_FILTER}"
     restart: unless-stopped
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
-  
+
+  # =====================================================================
+  # TCPDUMP Capture for iot
+  # Captures raw packets using the *same filter* as p0f_iot
+  # =====================================================================
+
+  tcpdump_iot:
+    image: nicolaka/netshoot
+    container_name: tcpdump_iot
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    read_only: true
+    volumes:
+      - ./raw_logs:/pcap:rw # Separate directory for pcap files
+    environment:
+      - P0F_INTERFACE=${P0F_INTERFACE:-eno1}
+      - IOT_FILTER=${IOT_FILTER} # <-- Uses the same filter
+    command:
+      - /bin/sh
+      - -c
+      - |
+        umask 022
+        mkdir -p /pcap
+        touch /pcap/iot.pcap
+        chmod 644 /pcap/iot.pcap
+        # -U = unbuffered, so the file writes in real-time
+        exec tcpdump -i "$P0F_INTERFACE" -p -U -w /pcap/iot.pcap "${IOT_FILTER}"
+    restart: unless-stopped
+    # user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+
+  # =====================================================================
+  # P0F Spoofed Monitor
+  # =====================================================================
+
   p0f_spoofed:
     image: dtagdevsec/p0f:24.04.1
     container_name: p0f_spoofed
@@ -104,7 +208,37 @@ services:
         exec /opt/p0f/p0f -i "$P0F_INTERFACE" -p -o /var/log/p0f/spoofed.log "${SPOOFED_FILTER}"
     restart: unless-stopped
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
-  
+
+  # =====================================================================
+  # TCPDUMP Capture for Spoofed
+  # Captures raw packets using the *same filter* as p0f_spoofed
+  # =====================================================================
+
+  tcpdump_spoofed:
+    image: nicolaka/netshoot
+    container_name: tcpdump_spoofed
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    read_only: true
+    volumes:
+      - ./raw_logs:/pcap:rw
+    environment:
+      - P0F_INTERFACE=${P0F_INTERFACE:-eno1}
+      - SPOOFED_FILTER=${SPOOFED_FILTER} # <-- Uses the same filter
+    command:
+      - /bin/sh
+      - -c
+      - |
+        umask 022
+        mkdir -p /pcap
+        touch /pcap/spoofed.pcap
+        chmod 644 /pcap/spoofed.pcap
+        exec tcpdump -i "$P0F_INTERFACE" -p -U -w /pcap/spoofed.pcap "${SPOOFED_FILTER}"
+    restart: unless-stopped
+    # user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
   p0f_other:
     image: dtagdevsec/p0f:24.04.1
     container_name: p0f_other
@@ -129,23 +263,3 @@ services:
         exec /opt/p0f/p0f -i "$P0F_INTERFACE" -p -o /var/log/p0f/other.log "${OTHER_FILTER}"
     restart: unless-stopped
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
-
-  # ---------------------------------------------------------------------
-  # Logrotate sidecar: rotates p0f logs daily (copytruncate to avoid restart)
-  # ---------------------------------------------------------------------
-  logrotate_p0f:
-    image: blacklabelops/logrotate:latest
-    container_name: logrotate_p0f
-    volumes:
-      - ./p0f_logs:/var/log/p0f
-    environment:
-      - LOGS_DIRECTORIES=/var/log/p0f
-      - LOGROTATE_INTERVAL=daily
-      - CRON_SCHEDULE=0 0 * * *
-      - LOGROTATE_OLDDIR=/var/log/p0f/old
-      - LOGROTATE_COMPRESSION=compress
-      - LOGROTATE_COPIES=7
-      - TZ=UTC
-    restart: unless-stopped
-    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
-
