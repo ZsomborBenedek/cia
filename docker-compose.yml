@@ -297,3 +297,35 @@ services:
         exec python3 /app/code/main.py
     restart: unless-stopped
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+  # =====================================================================
+  # Email Notifier (sends alerts via external mail relay)
+  # =====================================================================
+
+  mail_notifier:
+    image: python:3.11-slim
+    container_name: mail_notifier
+    working_dir: /app
+    volumes:
+      - ./notifier:/app/code:ro
+      - ./parser/results:/app/alerts:ro
+      - mail_notifier_state:/app/state:rw
+    environment:
+      - ALERTS_FILE=/app/alerts/alerts.log
+      - MAIL_SERVER=${MAIL_SERVER:-mail.os3.nl}
+      - MAIL_PORT=${MAIL_PORT:-25}
+      - MAIL_FROM=${MAIL_FROM:-p0f@cia.local}
+      - MAIL_TO=${MAIL_TO:-admin@os3.nl}
+      - SCAN_INTERVAL=10
+      - MAX_EMAILS_PER_MINUTE=3
+    command:
+      - /bin/sh
+      - -c
+      - |
+        python3 /app/code/mail_notifier.py
+    restart: unless-stopped
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+volumes:
+  mail_notifier_state:
+    driver: local
