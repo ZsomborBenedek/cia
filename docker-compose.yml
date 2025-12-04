@@ -263,3 +263,37 @@ services:
         exec /opt/p0f/p0f -i "$P0F_INTERFACE" -p -o /var/log/p0f/other.log "${OTHER_FILTER}"
     restart: unless-stopped
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+  # =====================================================================
+  # P0F Log Parser
+  # =====================================================================
+
+  parser:
+    image: python:3.11-slim
+    container_name: p0f_parser
+    working_dir: /app
+    volumes:
+      - ./parser:/app/code
+      - ./p0f_logs:/app/p0f_logs:ro
+      - ./parser/results:/app/results:rw
+      - ./parser/alert.tmpl:/app/alert.tmpl:ro
+    environment:
+      - SOURCE_DIRECTORY=/app/p0f_logs
+      - DESTINATION_DIRECTORY=/app/results
+      - ALERT_TEMPLATE=/app/alert.tmpl
+      - PYTHONUNBUFFERED=1
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -ex
+        echo "[setup] Creating venv..."
+        python3 -m venv /tmp/venv
+        echo "[setup] Activating venv..."
+        . /tmp/venv/bin/activate
+        echo "[setup] Installing jinja2..."
+        pip install --no-cache-dir jinja2
+        echo "[setup] Starting parser..."
+        exec python3 /app/code/main.py
+    restart: unless-stopped
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
