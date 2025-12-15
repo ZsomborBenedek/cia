@@ -6,3 +6,8 @@ nmap/*.tar.bz2
 .vscode/
 *.pcap
 parser/.DS_Store
+._*
+*.email.txt
+*.zip
+parser/results/
+results/scans/

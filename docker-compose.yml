@@ -275,12 +275,11 @@ services:
     volumes:
       - ./parser:/app/code
       - ./p0f_logs:/app/p0f_logs:ro
-      - ./parser/results:/app/results:rw
-      - ./parser/alert.tmpl:/app/alert.tmpl:ro
+      - ./results/scans:/app/jobs:rw
     environment:
       - SOURCE_DIRECTORY=/app/p0f_logs
-      - DESTINATION_DIRECTORY=/app/results
-      - ALERT_TEMPLATE=/app/alert.tmpl
+      - DESTINATION_DIRECTORY=/app/jobs/to_do
+      - JOBS_DIRECTORY=/app/jobs/to_do
       - PYTHONUNBUFFERED=1
     command:
       - /bin/sh
@@ -308,10 +307,10 @@ services:
     working_dir: /app
     volumes:
       - ./notifier:/app/code:ro
-      - ./parser/results:/app/alerts:ro
+      - ./results/emailbox:/app/emailbox:rw
       - mail_notifier_state:/app/state:rw
     environment:
-      - ALERTS_FILE=/app/alerts/alerts.log
+      - EMAILBOX_DIRECTORY=/app/emailbox
       - MAIL_SERVER=${MAIL_SERVER:-mail.os3.nl}
       - MAIL_PORT=${MAIL_PORT:-25}
       - MAIL_FROM=${MAIL_FROM:-p0f@cia.local}
@@ -322,9 +321,49 @@ services:
       - /bin/sh
       - -c
       - |
-        python3 /app/code/mail_notifier.py
+        python3 /app/code/main.py
     restart: unless-stopped
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+  # =====================================================================
+  # Nmap Runner
+  # =====================================================================
+
+  nmap_runner:
+    build:
+      context: .
+    image: nmap-runner:latest
+    container_name: nmap_runner
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    working_dir: /app
+    volumes:
+      - ./nmap_runner:/app/:rw
+      - ./results/scans/:/app/jobs:rw
+      - ./results/emailbox/:/app/emailbox:rw
+    environment:
+      - JOBS_DIRECTORY=/app/jobs/to_do
+      - INFLIGHT_DIRECTORY=/app/jobs/in_progress
+      - DONE_DIRECTORY=/app/jobs/complete
+      - EMAILBOX_DIRECTORY=/app/emailbox
+      - PYTHONUNBUFFERED=1
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -ex
+        nmap --version
+        echo "[setup] Creating venv..."
+        python3 -m venv /tmp/venv
+        echo "[setup] Activating venv..."
+        . /tmp/venv/bin/activate
+        echo "[setup] Installing jinja2..."
+        pip install --no-cache-dir jinja2
+        echo "[setup] Starting nmap_runner..."
+        exec python3 /app/main.py
+    restart: unless-stopped
+    user: "0:0"
 
 volumes:
   mail_notifier_state:
