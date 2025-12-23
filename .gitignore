@@ -11,3 +11,6 @@ parser/.DS_Store
 *.zip
 parser/results/
 results/scans/
+fingerprinting
+*.png
+*.csv
