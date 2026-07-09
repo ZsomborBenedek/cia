@@ -102,6 +102,16 @@ print(f"[parser] Phase 1 complete. Processed {len(processed_entries)} unique ent
 print("[parser] Phase 2: Monitoring for new entries...")
 file_positions = {}
 
+# Initialize positions to EOF for logs that already exist (Phase 1 handled historical content)
+for root, dirs, files in os.walk(SOURCE_DIRECTORY):
+    for file in files:
+        if file.endswith(".log"):
+            file_path = os.path.join(root, file)
+            try:
+                file_positions[file_path] = os.path.getsize(file_path)
+            except OSError:
+                file_positions[file_path] = 0
+
 while True:
     # Discover log files
     for root, dirs, files in os.walk(SOURCE_DIRECTORY):
@@ -112,7 +122,6 @@ while True:
                 # Initialize position if not tracked
                 if file_path not in file_positions:
                     file_positions[file_path] = 0
-                
                 try:
                     with open(file_path, "r") as f:
                         current_size = os.path.getsize(file_path)
