@@ -9,6 +9,18 @@ SOURCE_DIRECTORY = os.environ.get("SOURCE_DIRECTORY")
 DESTINATION_DIRECTORY = os.environ.get("DESTINATION_DIRECTORY")
 ALERT_TEMPLATE = os.environ.get("ALERT_TEMPLATE")
 
+missing = [
+    name
+    for name, value in {
+        "SOURCE_DIRECTORY": SOURCE_DIRECTORY,
+        "DESTINATION_DIRECTORY": DESTINATION_DIRECTORY,
+        "ALERT_TEMPLATE": ALERT_TEMPLATE,
+    }.items()
+    if not value
+]
+if missing:
+    raise SystemExit(f"[parser] Missing required environment variables: {', '.join(missing)}")
+
 # Ensure results directory exists
 os.makedirs(DESTINATION_DIRECTORY, exist_ok=True)
 
