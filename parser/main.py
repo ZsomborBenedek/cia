@@ -104,12 +104,18 @@ while True:
                 
                 try:
                     with open(file_path, "r") as f:
+                        current_size = os.path.getsize(file_path)
+                        last_pos = file_positions.get(file_path, 0)
+                        if last_pos > current_size:
+                            last_pos = 0
+                            file_positions[file_path] = 0
+
                         # Seek to last known position
-                        f.seek(file_positions[file_path])
-                        
+                        f.seek(last_pos)
+
                         for line in f:
                             process_line(line)
-                        
+
                         # Update position
                         file_positions[file_path] = f.tell()
                 
