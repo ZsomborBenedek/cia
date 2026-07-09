@@ -51,8 +51,10 @@ def process_line(line):
     # Skip if already processed
     if entry in processed_entries:
         return
-    
+
     processed_entries.add(entry)
+    if len(processed_entries) > 100_000:
+        processed_entries.clear()
     
     # Extract source/destination IPs and ports
     src_ip = dst_ip = src_port = dst_port = "-"
