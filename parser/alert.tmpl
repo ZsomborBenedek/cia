@@ -2,7 +2,7 @@
 {% macro summary(timestamp, src_ip, dst_ip, src_port, dst_port, signature) -%}
 [ALERT] Unknown OS detected by p0f
 TS={{ timestamp }} SRC={{ src_ip }} DST={{ dst_ip }} SPORT={{ src_port }} DPORT={{ dst_port }}
-DetectedOS=UNKNOWN | Signature="{{ signature }}" | Action=Cross-check with Nmap
+DetectedOS=UNKNOWN | Signature="{{ signature | replace('\n', ' ') | replace('\r', ' ') | replace('"', '\\"') }}" | Action=Cross-check with Nmap
 {%- endmacro %}
 
 {% macro detailed(timestamp, src_ip, dst_ip, src_port, dst_port, protocol, signature, link_type, distance, uptime) -%}

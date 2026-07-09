@@ -9,7 +9,18 @@ from datetime import timezone
 SOURCE_DIRECTORY = os.environ.get("SOURCE_DIRECTORY")
 JOBS_DIRECTORY = os.environ.get("JOBS_DIRECTORY")
 
-# Ensure results directories exist
+missing = [
+    name
+    for name, value in {
+        "SOURCE_DIRECTORY": SOURCE_DIRECTORY,
+        "JOBS_DIRECTORY": JOBS_DIRECTORY,
+    }.items()
+    if not value
+]
+if missing:
+    raise SystemExit(f"[parser] Missing required environment variables: {', '.join(missing)}")
+
+# Ensure results directory exists
 os.makedirs(JOBS_DIRECTORY, exist_ok=True)
 
 print(f"[parser] Starting parser...")
@@ -226,9 +237,19 @@ for root, dirs, files in os.walk(SOURCE_DIRECTORY):
 
 print(f"[parser] Phase 1 complete. Unknown client IPs jobbed: {len(processed_unknown_client_ips)}")
 
-# Phase 1: Poll for new entries in real-time
-print("[parser] Phase 1: Monitoring for new entries...")
+# Phase 2: Poll for new entries in real-time
+print("[parser] Phase 2: Monitoring for new entries...")
 file_positions = {}
+
+# Initialize positions to EOF for logs that already exist (Phase 1 handled historical content)
+for root, dirs, files in os.walk(SOURCE_DIRECTORY):
+    for file in files:
+        if file.endswith(".log"):
+            file_path = os.path.join(root, file)
+            try:
+                file_positions[file_path] = os.path.getsize(file_path)
+            except OSError:
+                file_positions[file_path] = 0
 
 while True:
     # Discover log files
@@ -244,8 +265,14 @@ while True:
 
                 try:
                     with open(file_path, "r") as f:
+                        current_size = os.path.getsize(file_path)
+                        last_pos = file_positions.get(file_path, 0)
+                        if last_pos > current_size:
+                            last_pos = 0
+                            file_positions[file_path] = 0
+
                         # Seek to last known position
-                        f.seek(file_positions[file_path])
+                        f.seek(last_pos)
 
                         for line in f:
                             process_line(line)
