@@ -1,7 +1,6 @@
 import os
 import re
 import time
-import subprocess
 from datetime import datetime
 from datetime import timezone
 from jinja2 import Template
