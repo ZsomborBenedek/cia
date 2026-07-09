@@ -7,24 +7,16 @@ from datetime import timezone
 
 
 SOURCE_DIRECTORY = os.environ.get("SOURCE_DIRECTORY")
-JOBS_DIRECTORY = os.environ.get("JOBS_DIRECTORY")
+DESTINATION_DIRECTORY = os.environ.get("DESTINATION_DIRECTORY")
+JOBS_DIRECTORY = os.environ.get("JOBS_DIRECTORY", os.path.join(DESTINATION_DIRECTORY, "jobs"))
 
-missing = [
-    name
-    for name, value in {
-        "SOURCE_DIRECTORY": SOURCE_DIRECTORY,
-        "JOBS_DIRECTORY": JOBS_DIRECTORY,
-    }.items()
-    if not value
-]
-if missing:
-    raise SystemExit(f"[parser] Missing required environment variables: {', '.join(missing)}")
-
-# Ensure results directory exists
+# Ensure results directories exist
+os.makedirs(DESTINATION_DIRECTORY, exist_ok=True)
 os.makedirs(JOBS_DIRECTORY, exist_ok=True)
 
 print(f"[parser] Starting parser...")
 print(f"[parser] Source: {SOURCE_DIRECTORY}")
+print(f"[parser] Destination: {DESTINATION_DIRECTORY}")
 print(f"[parser] Jobs: {JOBS_DIRECTORY}")
 
 # Track processed *unknown connections* to avoid duplicate alerts
@@ -117,6 +109,8 @@ def merge_record(conn: dict, rec: dict) -> None:
     conn["last_raw"] = rec.get("raw")
 
 
+
+
 def _safe_filename(s: str) -> str:
     # conservative filename sanitizer
     return re.sub(r"[^A-Za-z0-9._-]+", "_", s)
@@ -149,10 +143,10 @@ def maybe_emit_unknown_alert(conn: dict) -> None:
     if not cli_ip:
         return
 
-    # if cli_ip in processed_unknown_client_ips:
-    #     return
+    if cli_ip in processed_unknown_client_ips:
+        return
 
-    # processed_unknown_client_ips.add(cli_ip)
+    processed_unknown_client_ips.add(cli_ip)
 
     # Snapshot a JSON-serializable view of the connection
     mods_seen = sorted(list(conn.get("mods_seen", set())))
@@ -228,6 +222,7 @@ for root, dirs, files in os.walk(SOURCE_DIRECTORY):
     for file in files:
         if file.endswith(".log"):
             file_path = os.path.join(root, file)
+            print(f"[parser] Reading {file_path}")
             try:
                 with open(file_path, "r") as f:
                     for line in f:
@@ -241,21 +236,10 @@ print(f"[parser] Phase 1 complete. Unknown client IPs jobbed: {len(processed_unk
 print("[parser] Phase 2: Monitoring for new entries...")
 file_positions = {}
 
-# Initialize positions to EOF for logs that already exist (Phase 1 handled historical content)
-for root, dirs, files in os.walk(SOURCE_DIRECTORY):
-    for file in files:
-        if file.endswith(".log"):
-            file_path = os.path.join(root, file)
-            try:
-                file_positions[file_path] = os.path.getsize(file_path)
-            except OSError:
-                file_positions[file_path] = 0
-
 while True:
     # Discover log files
     for root, dirs, files in os.walk(SOURCE_DIRECTORY):
         for file in files:
-            print(f"Scanning {file}")
             if file.endswith(".log"):
                 file_path = os.path.join(root, file)
 
@@ -265,14 +249,8 @@ while True:
 
                 try:
                     with open(file_path, "r") as f:
-                        current_size = os.path.getsize(file_path)
-                        last_pos = file_positions.get(file_path, 0)
-                        if last_pos > current_size:
-                            last_pos = 0
-                            file_positions[file_path] = 0
-
                         # Seek to last known position
-                        f.seek(last_pos)
+                        f.seek(file_positions[file_path])
 
                         for line in f:
                             process_line(line)

@@ -1,0 +1,21 @@
+[{{ timestamp }}] Unknown OS traffic detected (p0f ???)
+
+Connection:
+  client: {{ src_ip }}:{{ src_port }}
+  server: {{ dst_ip }}:{{ dst_port }}
+  subject: {{ subj | default("-") }}
+  p0f_dist: {{ dist | default("-") }}
+  p0f_params: {{ params | default("-") }}
+  p0f_link: {{ link | default("-") }}
+  p0f_mtu: {{ raw_mtu | default("-") }}
+  p0f_mods: {{ mods_seen | default("-") }}
+
+p0f signature:
+  {{ p0f_signature }}
+
+Nmap OS guess:
+  os_name: {{ nmap_os_name | default("(no match)") }}
+  accuracy: {{ nmap_accuracy | default("-") }}
+
+Nmap signature:
+  {{ nmap_raw | default("-") }}
