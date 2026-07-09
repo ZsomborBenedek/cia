@@ -1,0 +1,36 @@
+# Summary Alert Template
+{% macro summary(timestamp, src_ip, dst_ip, src_port, dst_port, signature) -%}
+[ALERT] Unknown OS detected by p0f
+TS={{ timestamp }} SRC={{ src_ip }} DST={{ dst_ip }} SPORT={{ src_port }} DPORT={{ dst_port }}
+DetectedOS=UNKNOWN | Signature="{{ signature | replace('\n', ' ') | replace('\r', ' ') | replace('"', '\\"') }}" | Action=Cross-check with Nmap
+{%- endmacro %}
+
+{% macro detailed(timestamp, src_ip, dst_ip, src_port, dst_port, protocol, signature, link_type, distance, uptime) -%}
+[ALERT] Passive Fingerprinting Failure – Unknown OS Detected
+Timestamp: {{ timestamp }}
+Source IP: {{ src_ip }}
+Destination IP: {{ dst_ip }}
+Source Port: {{ src_port }}
+Destination Port: {{ dst_port }}
+Protocol: {{ protocol }}
+
+p0f Signature Details:
+  - Detected OS: UNKNOWN
+  - Raw Signature: {{ signature }}
+  - Link Type: {{ link_type }}
+  - Distance (TTL-based): {{ distance }}
+  - Uptime Guess: {{ uptime }}
+
+Context:
+  - Event Type: OS fingerprint mismatch / unclassified host
+  - Possible Causes:
+       * Spoofed TCP/IP stack (intentional evasion)
+       * Novel or unsupported OS profile
+       * Corrupted or incomplete packet capture
+       * Middlebox rewriting packet fields
+
+Recommended Follow-up:
+  - Capture additional packets from this host
+  - Cross-check with active fingerprinting (e.g., Nmap)
+  - Flag for manual review if recurring
+{%- endmacro %}
