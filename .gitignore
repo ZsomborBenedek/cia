@@ -5,12 +5,15 @@ nmap/nmap-7.98/
 nmap/*.tar.bz2
 .vscode/
 *.pcap
-parser/.DS_Store
+.venv/
+results/
+*.zip
+.DS_Store
 ._*
 *.email.txt
-*.zip
 parser/results/
 results/scans/
 fingerprinting
 *.png
 *.csv
+*.pyc
